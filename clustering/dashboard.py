@@ -1,3 +1,4 @@
+#streamlit run dashboard.py
 import streamlit as st
 import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
@@ -40,4 +41,30 @@ if upload_file:
         min_confidence = st.sidebar.slider("Minimum Confidence", 0.1, 1.0, 0.1, step=0.05)
 
         #Apply apriori algorithm to find frequent itemsets
-        frequent_itemsets = apriori(df_encoded, min_support=min_)
+        frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
+
+        rules = association_rules(frequent_itemsets, metric = 'confidence', min_threshold=min_confidence)
+
+        if not rules.empty:
+            rules_sorted = rules[['antecedents','consequents','support','confidence','lift']].sort_values(by='lift', ascending=False)
+
+            st.subheader("Top 10 Association Rules")
+            st.dataframe(rules_sorted.head(10).style.format({
+                'support': '{:.3f}',
+                'confidence': '{:.2f}',
+                'lift':'{:.2f}'
+            }))
+
+            #Allow user to download all rules as a CSV
+            csv = rules_sorted.to_csv(index=False)
+            st.download_button('Download All Rules as CSV', csv, file_name = 'association_rules.csv', mime='text/csv') #mime type for csv
+        else:
+            #if no rules found
+            st.warning("No association rules found with the given parameters. Try adjusting the sliders.")
+    else:
+        #if the dataset is missing required columns
+        st.error('Column missing. Please upload a file with the required columns: Member_number, Date, itemDescription.')
+
+else:
+    #if no file is uploaded
+    st.info("Please upload a CSV file to proceed.")
